@@ -1,0 +1,15 @@
+# Bilderordner
+bilder/
+
+# Temporäre Datei
+temp.jpg
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Virtuelle Umgebung
+venv/
+
+# Kivy Logs
+*.log
