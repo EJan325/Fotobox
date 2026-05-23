@@ -18,8 +18,8 @@ class ImageViewScreen(Screen):
         self.btn_save = RoundedButton(
             text="Speichern",
             font_size=32,
-            size_hint=(0.3, 0.15),
-            pos_hint={'x': 0.05, 'y': 0.05},
+            size_hint=(0.25, 0.15),
+            pos_hint={'right': 0.95, 'y': 0.05},
             background_color=(0, 0, 0, 0.5)
         )
         self.btn_save.bind(on_release=self.save_photo)
@@ -32,7 +32,7 @@ class ImageViewScreen(Screen):
             text="Löschen",
             font_size=32,
             size_hint=(0.3, 0.15),
-            pos_hint={'right': 0.95, 'y': 0.05},
+            pos_hint={'x': 0.05, 'y': 0.05},
             background_color=(0, 0, 0, 0.5)
         )
         self.btn_delete.bind(on_release=self.delete_photo)
