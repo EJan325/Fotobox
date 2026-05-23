@@ -1,93 +1,101 @@
 from widgets.rounded_button import RoundedButton
-from widgets.clickable_image import ClickableImage
+from widgets.gallery_thumbnail import GalleryThumbnail
 
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.floatlayout import FloatLayout
+from kivy.lang import Builder
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import Screen
+from kivy.metrics import dp
+from kivy.uix.recycleview import RecycleView
 
 from config import BILDER_DIR
+
 import os
 
+KV = '''
+#:import dp kivy.metrics.dp
 
-class GalleryScreen(Screen):
-    def __init__(self, **kwargs):
+<GalleryRecycleView>:
+    viewclass: 'GalleryThumbnail'
+
+    RecycleGridLayout:
+        cols: 3
+        default_size: None, dp(200)
+        default_size_hint: 1, None
+        size_hint_y: None
+        height: self.minimum_height
+        spacing: dp(10)
+        padding: dp(10)
+'''
+
+Builder.load_string(KV)
+
+
+class GalleryRecycleView(RecycleView):
+
+    def __init__(self, gallery_screen, **kwargs):
         super().__init__(**kwargs)
-        layout = FloatLayout()
-        
-        # Hintergrundfarbe für die Gallery hinzufügen
-        from kivy.graphics import Color, Rectangle
-        with layout.canvas.before:
-            Color(0.65, 0.55, 0.4, 1)  # Warmes Eichenholz-Hellbraun
-            self.bg_rect = Rectangle(size=layout.size, pos=layout.pos)
-            layout.bind(size=self._update_bg, pos=self._update_bg)
 
-        scroll = ScrollView(size_hint=(1, 0.9), pos_hint={'x': 0, 'y': 0})
-        self.grid = GridLayout(cols=3, spacing=10, size_hint_y=None, padding=10)
-        self.grid.bind(minimum_height=self.grid.setter('height'))
-        scroll.add_widget(self.grid)
-
-        btn_back = RoundedButton(
-            text="Zurück",
-            font_size=28,
-            size_hint=(0.2, 0.1),
-            pos_hint={'x': 0.02, 'top': 0.98},
-            background_color=(0, 0, 0, 0.5)
-        )
-        btn_back.bind(on_release=self.go_back)
-
-        layout.add_widget(scroll)
-        layout.add_widget(btn_back)
-        self.add_widget(layout)
-
-    def go_back(self, *args):
-        self.manager.current = "photo"
-
-    def _update_bg(self, instance, value):
-        """Hintergrund an Layout-Größe anpassen"""
-        self.bg_rect.pos = instance.pos
-        self.bg_rect.size = instance.size
-
-    def on_pre_enter(self, *args):
-        self.load_images()
+        self.gallery_screen = gallery_screen
+        self.viewclass = "GalleryThumbnail"
+        self.image_paths = []
+        self.scroll_type = ['bars']
+        self.bar_width = dp(10)
 
     def load_images(self):
-        self.grid.clear_widgets()
-        self.image_paths = []  # Liste aller Bildpfade für Swipe-Navigation
-        
+        self.image_paths = []
+        rv_data = []
+
         if os.path.exists(BILDER_DIR):
-            # Sammle alle Bildpfade
             for file in sorted(os.listdir(BILDER_DIR), reverse=True):
                 if file.lower().endswith((".png", ".jpg", ".jpeg")):
                     img_path = os.path.join(BILDER_DIR, file)
                     self.image_paths.append(img_path)
-            
-            # Erstelle Thumbnails
-            for img_path in self.image_paths:
-                thumb = ClickableImage(
-                    source=img_path,
-                    size_hint_y=None, 
-                    height=200, 
-                    allow_stretch=True,
-                    image_path=img_path,
-                    gallery_screen=self
-                )
-                self.grid.add_widget(thumb)
+                    rv_data.append({
+                        "source": img_path,
+                        "image_path": img_path,
+                        "gallery_view": self,
+                    })
+
+        self.data = rv_data
 
     def open_image(self, path):
-        """Öffnet ein Bild - wird nur bei tatsächlichen Klicks aufgerufen"""
-        # Finde Index des aktuellen Bildes für Swipe-Navigation
         try:
-            image_index = self.image_paths.index(path)
+            index = self.image_paths.index(path)
         except ValueError:
-            image_index = 0
-            
-        image_view = self.manager.get_screen("imageview")
+            index = 0
+
+        image_view = self.gallery_screen.manager.get_screen("imageview")
         image_view.set_image(
-            path, 
-            temp=False, 
+            path,
+            temp=False,
             from_gallery=True,
             gallery_images=self.image_paths,
-            image_index=image_index
+            image_index=index
         )
-        self.manager.current = "imageview"
+        self.gallery_screen.manager.current = "imageview"
+
+
+class GalleryScreen(Screen):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        main_layout = BoxLayout(orientation="vertical", spacing=0, padding=0)
+
+        self.gallery_view = GalleryRecycleView(self, size_hint=(1, 0.85))
+        main_layout.add_widget(self.gallery_view)
+
+        back_button = RoundedButton(
+            text="Zurück",
+            size_hint=(1, 0.15)
+        )
+        back_button.bind(on_press=self.go_back)
+        main_layout.add_widget(back_button)
+
+        self.add_widget(main_layout)
+
+    def on_enter(self):
+        self.gallery_view.load_images()
+
+    def go_back(self, instance):
+        self.manager.current = "photo"
