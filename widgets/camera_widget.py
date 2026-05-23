@@ -3,6 +3,7 @@ from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 
 from picamera2 import Picamera2
+from libcamera import Transform
 
 import time
 
@@ -15,7 +16,8 @@ class CameraWidget(Image):
         self.picam2 = Picamera2()
 
         preview_config = self.picam2.create_preview_configuration(
-            main={"format": "RGB888", "size": (2304, 1296)}
+            main={"format": "RGB888", "size": (2304, 1296)},
+            transform=Transform(hflip=1)
         )
 
         self.picam2.configure(preview_config)
@@ -44,7 +46,6 @@ class CameraWidget(Image):
                 )
 
                 self.texture.flip_vertical()
-                self.texture.flip_horizontal()
 
             self.texture.blit_buffer(
                 buf,
